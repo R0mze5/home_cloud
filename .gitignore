@@ -1,0 +1,26 @@
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# dotenv environment variable files
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
+
+# env folders
+backups/
+files/
+
+# temp files
+*.temp.md
+
+# system files
+.DS_Store
