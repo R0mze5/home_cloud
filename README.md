@@ -1,4 +1,4 @@
-# HOMECLOUD with nextcloud
+# HOMECLOUD with nextcloud and wireguard client
 
 ## Local server with nextcloud prepare
 
