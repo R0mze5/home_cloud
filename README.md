@@ -1,74 +1,97 @@
-# NEXTCLOUD
+# HOMECLOUD with nextcloud
 
-## Run and configure
+## Local server with nextcloud prepare
 
-copy example env file to .env and fill empty fields
-
-```sh
-cp ./.env.example ./.env
-```
-
-## Backup and restore
-
-### Manually backup
-
-<https://github.com/offen/docker-volume-backup>
+- Download and unarchive project from github
 
 ```sh
-docker exec nextcloud_backup backup
+curl -L -o homecloud.zip https://github.com/R0mze5/home_cloud/archive/refs/heads/main.zip
+unzip homecloud.zip -d homecloud
+rm homecloud.zip
 ```
 
-### Restoring a volume from a backup
-
-compose and stop containers to create volumes if they not exist:
+or via git
 
 ```sh
-docker-compose up
-docker-compose down
+git clone https://github.com/R0mze5/home_cloud.git
 ```
 
-check name of created volumes
+- open `homecloud` folder
 
 ```sh
-docker volume list
+cd ./homecloud
 ```
 
->names of volumes have format `[DOCKER_COMPOSE_PREFIX]_[VOLUME_NAME]`
->
-> DOCKER_COMPOSE_PREFIX in default is your project directory name
->
-> VOLUME_NAME is the data-volume container name from compose file
->
->if our project is placed in `cloud` folder, volumes call `cloud_nextcloud-app` and `cloud_nextcloud-db`
-
-restore volumes:
+- copy example env file to .env
 
 ```sh
-# create temp container and connect required volumes to it. we use alpine as image of temp container
-
-docker run -d -it --name temp_restore_container -v cloud_nextcloud-app:/nextcloud_app -v cloud_nextcloud-db:/nextcloud_db -v cloud_backup:/nextcloud_backup alpine
-
-# copy our backup file from backup folder to temp container backup folder
-
-docker cp ./backups/backup-latest.tar.gz temp_restore_container:/nextcloud_backup
+make local_prepare
 ```
 
-attach temp docker container and restore volumes data
+- fill fields on in `./local/.env` file if required
+
+## Remote server with wireguard setup
+
+- install `curl` or `git`, `docker` with `docker compose` and `make` if they not installed yet
+
+- Download and unarchive project from github
 
 ```sh
-docker attach temp_restore_container
-# extract backup archive
-tar -C /nextcloud_backup -xvf  /nextcloud_backup/backup-latest.tar.gz
-# copy all data of app and db
-cp -a /nextcloud_backup/backup/nextcloud-app-backup/. /nextcloud_app
-cp -a /nextcloud_backup/backup/nextcloud-db-backup/. /nextcloud_db
-exit
+curl -L -o homecloud.zip https://github.com/R0mze5/home_cloud/archive/refs/heads/main.zip
+unzip homecloud.zip -d homecloud
+rm homecloud.zip
 ```
 
-clear temp data
+or via git
 
 ```sh
-docker stop temp_restore_container
-docker rm temp_restore_container
-docker volume rm cloud_backup
+git clone https://github.com/R0mze5/home_cloud.git
 ```
+
+- open `homecloud` folder and run server
+
+```sh
+cd ./homecloud
+make server_up
+```
+
+## Homecloud configuration
+
+- on `remote server with wireguard` display and copy wireguard config
+
+```sh
+make display_conf
+```
+
+- and paste it on `local server with nextcloud` to `./local/peer_homeserver.conf` file and save it
+
+- run local `local server with nextcloud` in `homecloud` folder
+
+```sh
+make local_up
+```
+
+## Configuration testing
+
+- download and install [wireguard client]("https://www.wireguard.com/install/") on another device, NOT ON `Local server with nextcloud`
+
+- display and copy config for new device
+
+```sh
+make display_mypc_conf
+```
+
+- paste config to your device
+
+- connect to wireguard server
+
+- try to connect to `homecloud` in browser by url `http://10.13.13.2`
+
+## Bonus
+
+you have own VPN
+
+## FAQ
+
+- how get config for new device [here](./docs/wireguard_users.md)
+- how to backup and restore nextcloud [here](./docs/nextcloud_backup.md)
