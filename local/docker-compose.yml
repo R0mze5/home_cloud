@@ -13,13 +13,13 @@ services:
       - nextcloud-app:/var/www/html
       - ${LOCAL_PATH_TO_FILES:-./files}:/var/www/files
     environment:
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-password}
-      - MYSQL_DATABASE=${MYSQL_DATABASE:-nextcloud}
+      - MYSQL_DATABASE=${NEXTCLOUD_DATABASE:-nextcloud}
       - MYSQL_USER=${MYSQL_USER:-nextcloud}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-password}
       - MYSQL_HOST=nextcloud-db
       - NEXTCLOUD_TRUSTED_DOMAINS=${NEXTCLOUD_HOME_NETWORK}
-      - NEXTCLOUD_ADMIN_USER=${NEXTCLOUD_ADMIN_USER}
-      - NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASSWORD}
+      - NEXTCLOUD_ADMIN_USER=${ADMIN_USER}
+      - NEXTCLOUD_ADMIN_PASSWORD=${ADMIN_PASSWORD}
       - PHP_MEMORY_LIMIT=2G
       - PHP_UPLOAD_LIMIT=16G
     depends_on:
@@ -31,14 +31,18 @@ services:
     container_name: nextcloud_proxy
     restart: always
     ports:
-      - 80:80
+      - 80:80 # homecloud
+      - 81:81 # gitea
+      - 82:82 # jellyfin
       - 443:443
-      - 8080:8080
     volumes:
       - nextcloud-app:/var/www/html
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/sites:/etc/nginx/sites-enabled
     depends_on:
       - nextcloud-app
+      - homecloud-gitea
+      - homecloud-jellyfin
 
 
   nextcloud-wireguard-client:
@@ -56,17 +60,22 @@ services:
     restart: always
 
   nextcloud-db:
-    image: mariadb
+    image: mariadb:latest
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
     container_name: nextcloud_db
     restart: always
     command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
     volumes:
+      - ./init_db.sh:/docker-entrypoint-initdb.d/init.sh
       - nextcloud-db:/var/lib/mysql
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-rootpassword}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-password}
+      - MYSQL_DATABASE_1=${NEXTCLOUD_DATABASE:-nextcloud}
+      - MYSQL_DATABASE_2=${GITEA_DATABASE:-gitea}
       - MYSQL_USER=${MYSQL_USER:-nextcloud}
-      - MYSQL_DATABASE=${MYSQL_DATABASE:-nextcloud}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-password}
 
   nextcloud-backup:
     image: offen/docker-volume-backup:latest
@@ -85,3 +94,49 @@ services:
         # also provide a location by setting `DOCKER_HOST` in the container
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ${LOCAL_PATH_TO_BACKUPS-./backups}:/archive
+
+  homecloud-gitea:
+    image: gitea/gitea:latest
+    container_name: homecloud_gitea
+    restart: always
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - DB_TYPE=mysql
+      - DB_HOST=nextcloud-db:3306
+      - DB_NAME=${GITEA_DATABASE:-gitea}
+      - DB_USER=${MYSQL_USER:-gitea}
+      - DB_PASSWD=${MYSQL_PASSWORD:-gitea}
+      # admin user will create with first registered user
+    depends_on:
+      - nextcloud-db
+    volumes:
+      - ./data/gitea:/data
+
+  # when running, use localhost:82 as server
+  homecloud-jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: homecloud_jellyfin
+    restart: always
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - JELLYFIN_USERNAME=${ADMIN_USER:-user}
+      - JELLYFIN_PASSWORD=${ADMIN_PASSWORD:-password}
+    volumes:
+      - ./data/jellyfin:/config
+      - ${LOCAL_PATH_TO_MEDIA:-./media}:/media
+      # - /path/to/tvseries:/data/tvshows
+      # - /path/to/movies:/data/movies
+
+
+  # homecloud-homeassistant:
+  #   image: "ghcr.io/home-assistant/home-assistant:stable"
+  #   container_name: homecloud_homeassistant
+  #   restart: always
+  #   volumes:
+  #     - ./data/homeassistant:/config
+  #   privileged: true
+  #   network_mode: host
+    # ports:
+    #   - "8123:8123"

@@ -18,13 +18,10 @@ pids
 # env folders
 backups/
 files/
-server/config/
 
-# temp files
-*.temp.md
+local/data/
 
 # system files
 .DS_Store
 
 wg-0.conf
-server/nginx

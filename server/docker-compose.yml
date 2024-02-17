@@ -10,7 +10,6 @@ services:
       - NET_ADMIN
       - SYS_MODULE
     environment:
-      # - SERVERURL=auto #optional
       - PUID=1000
       - PGID=1000
       - TZ=Etc/UTC
@@ -18,8 +17,6 @@ services:
       - PEERS=homeserver,myPC,myPhone,myTablet #clients
       - INTERNAL_SUBNET=10.13.13.0 # internal WireGuard network
       - ALLOWEDIPS=0.0.0.0/0
-      # - CLIENT1=homeserver # Name of first client
-      # - CLIENT1_SUBNET=10.13.13.2/32 # IP-address of first client
     volumes:
       - ./config:/config
     sysctls:
@@ -27,12 +24,3 @@ services:
     ports:
       - "51820:51820/udp"
     restart: unless-stopped
-
-  # nginx:
-  #   image: nginx
-  #   container_name: nginx
-  #   volumes:
-  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-  #   ports:
-  #     - "80:80"
-  #   restart: unless-stopped
