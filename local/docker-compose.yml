@@ -50,7 +50,7 @@ services:
       - PUID=1000
       - PGID=1000
     volumes:
-      - ${LOCAL_PATH_TO_FILES:-./peer_homeserver.conf}:/config/wg0.conf
+      - ${PATH_TO_WIREGUARD_CONF:-./peer_homeserver.conf}:/config/wg0.conf
     network_mode: "host"
     privileged: true
     restart: always
