@@ -105,3 +105,5 @@ you have own VPN
 
 - how get config for new device [here](./docs/wireguard_users.md)
 - how to backup and restore nextcloud [here](./docs/nextcloud_backup.md)
+- how to integrate onlyoffice to nextcloud [here](./docs/onlyoffice.md)
+- how to backup and restore webtrees [here](./docs/webtrees_backup.md)

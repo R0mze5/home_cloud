@@ -14,17 +14,26 @@ services:
       - ${LOCAL_PATH_TO_FILES:-./files}:/var/www/files
     environment:
       - MYSQL_DATABASE=${NEXTCLOUD_DATABASE:-nextcloud}
-      - MYSQL_USER=${MYSQL_USER:-nextcloud}
+      - MYSQL_USER=${MYSQL_USER:-user}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD:-password}
       - MYSQL_HOST=nextcloud-db
       - NEXTCLOUD_TRUSTED_DOMAINS=${NEXTCLOUD_HOME_NETWORK}
-      - NEXTCLOUD_ADMIN_USER=${ADMIN_USER}
-      - NEXTCLOUD_ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - NEXTCLOUD_ADMIN_USER=${ADMIN_USER:-user}
+      - NEXTCLOUD_ADMIN_PASSWORD=${ADMIN_PASSWORD:-password}
       - PHP_MEMORY_LIMIT=2G
       - PHP_UPLOAD_LIMIT=16G
     depends_on:
       - nextcloud-db
+      - nextcloud-onlyoffice
 
+  nextcloud-onlyoffice:
+    image: onlyoffice/documentserver
+    volumes:
+      - ./data/onlyoffice/data:/var/www/onlyoffice/Data
+      - ./data/onlyoffice/logs:/var/log/onlyoffice
+      - ./data/onlyoffice/db:/var/lib/onlyoffice
+      - ./data/onlyoffice/redis:/var/lib/redis
+    restart: always
 
   nextcloud-nginx:
     image: nginx:alpine
@@ -34,6 +43,7 @@ services:
       - 80:80 # homecloud
       - 81:81 # gitea
       - 82:82 # jellyfin
+      - 83:83 # onlyoffice
       - 443:443
     volumes:
       - nextcloud-app:/var/www/html
@@ -43,6 +53,7 @@ services:
       - nextcloud-app
       - homecloud-gitea
       - homecloud-jellyfin
+      - nextcloud-onlyoffice
 
 
   nextcloud-wireguard-client:
@@ -61,9 +72,6 @@ services:
 
   nextcloud-db:
     image: mariadb:latest
-    # build:
-    #   context: .
-    #   dockerfile: Dockerfile
     container_name: nextcloud_db
     restart: always
     command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
@@ -74,7 +82,8 @@ services:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-rootpassword}
       - MYSQL_DATABASE_1=${NEXTCLOUD_DATABASE:-nextcloud}
       - MYSQL_DATABASE_2=${GITEA_DATABASE:-gitea}
-      - MYSQL_USER=${MYSQL_USER:-nextcloud}
+      - MYSQL_DATABASE_3=${WEBTREES_DATABASE:-webtrees}
+      - MYSQL_USER=${MYSQL_USER:-user}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD:-password}
 
   nextcloud-backup:
@@ -105,8 +114,8 @@ services:
       - DB_TYPE=mysql
       - DB_HOST=nextcloud-db:3306
       - DB_NAME=${GITEA_DATABASE:-gitea}
-      - DB_USER=${MYSQL_USER:-gitea}
-      - DB_PASSWD=${MYSQL_PASSWORD:-gitea}
+      - DB_USER=${MYSQL_USER:-user}
+      - DB_PASSWD=${MYSQL_PASSWORD:-password}
       # admin user will create with first registered user
     depends_on:
       - nextcloud-db
@@ -140,3 +149,28 @@ services:
   #   network_mode: host
     # ports:
     #   - "8123:8123"
+
+
+
+# https://github.com/fisharebest/webtrees - backup and restore section
+  homecloud-family-tree:
+    image: dtjs48jkt/webtrees
+    container_name: webtrees
+    ports:
+      - "84:84"
+    environment:
+      - PORT=84
+      - DB_HOST=nextcloud-db
+      - DB_PORT=3306
+      - DB_NAME=${WEBTREES_DATABASE:-webtrees}
+      - DB_USER=${MYSQL_USER:-user}
+      - DB_PASSWORD=${MYSQL_PASSWORD:-password}
+      - GROUP_ID=999
+      - DISABLE_SSL=TRUE
+      - WT_ADMIN=${ADMIN_USER:-user}
+      - WT_ADMINPW=${ADMIN_PASSWORD:-password}
+      - WT_ADMINMAIL=${ADMIN_EMAIL}
+    volumes:
+      - ./data/webtrees:/var/www/html/data
+    depends_on:
+      - nextcloud-db
